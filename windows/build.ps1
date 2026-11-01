@@ -9,7 +9,7 @@ if (-not (Test-Path -LiteralPath $compilerPath)) {
 if (-not (Test-Path -LiteralPath $compilerPath)) { throw '.NET Framework 4.x C# compiler is required.' }
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 $executablePath = Join-Path $outputDirectory 'PixelTxtConverter.exe'
-$sourcePaths = @('Core.cs', 'WebpDecoder.cs', 'ShellIntegration.cs', 'Program.cs', 'AssemblyInfo.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
+$sourcePaths = @('Core.cs', 'WebpDecoder.cs', 'TxpMonitor.cs', 'ShellIntegration.cs', 'Program.cs', 'AssemblyInfo.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
 $decoderPath = Join-Path $PSScriptRoot 'vendor\webp\dwebp.exe'
 if ((Get-FileHash -LiteralPath $decoderPath -Algorithm SHA256).Hash -ne '17C1488BF84B7834E9AA908BB40AFD0BE2E55D57567D210E96336C56BB6AE993') { throw 'Bundled WebP decoder checksum mismatch.' }
 $resources = @("/resource:$decoderPath,PixelTxt.dwebp.exe", "/resource:$(Join-Path $PSScriptRoot 'vendor\webp\COPYING'),PixelTxt.WebpLicense", "/resource:$(Join-Path $PSScriptRoot 'vendor\webp\PATENTS'),PixelTxt.WebpPatents")

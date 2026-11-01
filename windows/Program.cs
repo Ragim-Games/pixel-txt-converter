@@ -14,6 +14,8 @@ namespace PixelTxtConverter
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            if (args.Length == 1 && args[0] == "--watch") { WatcherApplication.RunWatcher(); return 0; }
+            if (args.Length == 1 && args[0] == "--stop-watcher") { WatcherApplication.StopWatcher(); return 0; }
             if (args.Length == 1 && args[0] == "--install")
             {
                 try { ShellIntegration.Install(); return 0; }
@@ -22,7 +24,7 @@ namespace PixelTxtConverter
             if (args.Length == 0) { Application.Run(new SetupForm()); return 0; }
             if (args.Length == 1 && args[0] == "--uninstall")
             {
-                if (MessageBox.Show("파일 탐색기의 TXT Convert / TXT Restore 메뉴 연결을 해제할까요?\n이미지와 TXT 파일은 유지됩니다.",
+                if (MessageBox.Show("TXP 자동 변환, 로그인 자동 시작 및 파일 연결을 해제할까요?\n이미지와 TXT/TXP 파일은 유지됩니다.",
                     "Pixel TXT Converter", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return 0;
                 try
                 {
@@ -54,22 +56,22 @@ namespace PixelTxtConverter
 
         public SetupForm()
         {
-            Text = "Pixel TXT Converter 2.1 · 설치 / 복구";
-            ClientSize = new Size(500, 350);
+            Text = "Pixel TXT Converter 2.2 · 설치 / 복구";
+            ClientSize = new Size(500, 390);
             Font = new Font("Malgun Gothic", 10);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
             var title = new Label { Text = "이미지 우클릭 → TXT Convert", Location = new Point(24, 24), Size = new Size(450, 36), Font = new Font(Font.FontFamily, 17, FontStyle.Bold) };
-            var description = new Label { Text = "PNG · JPG · WebP 등 이미지 → RGB TXT → 메모장\nTXT 우클릭 → TXT Restore (PNG)로 이미지도 복원합니다.\n\nWindows 10: 우클릭 메뉴 / Windows 11: 더 많은 옵션\nWebP 디코더 내장 · Windows 10/11 64비트 지원", Location = new Point(24, 76), Size = new Size(450, 134) };
-            state.SetBounds(24, 216, 450, 38);
+            var description = new Label { Text = "이미지 우클릭 → TXT Convert → RGB TXT 저장\nTXT 확장자를 .txp로 변경 → 같은 폴더에 PNG 자동 생성\n\n설치하면 로그인 시 자동 변환 프로그램이 실행됩니다.\n로컬 드라이브의 새 TXP를 감지하며 알림 영역에서 종료합니다.\nWindows 10: 우클릭 / Windows 11: 더 많은 옵션\nWebP 포함 · Windows 10/11 64비트 지원", Location = new Point(24, 76), Size = new Size(450, 170) };
+            state.SetBounds(24, 258, 450, 38);
             RefreshState();
-            var install = new Button { Text = "설치 / 메뉴 연결", Location = new Point(24, 270), Size = new Size(210, 44) };
-            var uninstall = new Button { Text = "메뉴 연결 해제", Location = new Point(250, 270), Size = new Size(210, 44) };
+            var install = new Button { Text = "설치 / 자동 변환 시작", Location = new Point(24, 316), Size = new Size(210, 44) };
+            var uninstall = new Button { Text = "자동 변환 / 연결 해제", Location = new Point(250, 316), Size = new Size(210, 44) };
             install.Click += delegate
             {
-                try { ShellIntegration.Install(); RefreshState(); MessageBox.Show("설치가 완료되었습니다.\n파일 탐색기에서 이미지를 우클릭하고 TXT Convert를 선택하세요.", "Pixel TXT Converter"); }
+                try { ShellIntegration.Install(); RefreshState(); MessageBox.Show("설치가 완료되었습니다.\nRGB TXT의 확장자를 .txp로 바꾸면 같은 폴더에 PNG가 생성됩니다.", "Pixel TXT Converter"); }
                 catch (Exception error) { Program.ShowError(error); }
             };
             uninstall.Click += delegate
@@ -80,7 +82,7 @@ namespace PixelTxtConverter
             Controls.AddRange(new Control[] { title, description, state, install, uninstall });
         }
 
-        private void RefreshState() { state.Text = ShellIntegration.IsInstalled() ? "상태: WebP를 포함한 모든 메뉴가 연결되어 있습니다." : "상태: 설치 또는 업데이트가 필요합니다."; }
+        private void RefreshState() { state.Text = ShellIntegration.IsInstalled() ? "상태: 메뉴 · TXP 연결 · 자동 시작이 등록되어 있습니다." : "상태: 설치 또는 업데이트가 필요합니다."; }
     }
 
     internal sealed class ConvertForm : Form
@@ -115,7 +117,8 @@ namespace PixelTxtConverter
             try
             {
                 string fullPath = Path.GetFullPath(input);
-                string desired = toText ? fullPath + ".txt" : Path.Combine(Path.GetDirectoryName(fullPath), Path.GetFileNameWithoutExtension(fullPath) + ".restored.png");
+                string desired = toText ? fullPath + ".txt" : string.Equals(Path.GetExtension(fullPath), ".txp", StringComparison.OrdinalIgnoreCase)
+                    ? Path.ChangeExtension(fullPath, ".png") : Path.Combine(Path.GetDirectoryName(fullPath), Path.GetFileNameWithoutExtension(fullPath) + ".restored.png");
                 int previous = -1;
                 Action<int> report = value =>
                 {

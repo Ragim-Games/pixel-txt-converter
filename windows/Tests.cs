@@ -4,6 +4,8 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using System.Threading;
+using System.Collections.Concurrent;
 using Microsoft.Win32;
 using PixelTxtConverter;
 
@@ -88,6 +90,7 @@ internal static class Tests
             }
             Assert(ShellIntegration.Command(@"C:\folder with spaces\app.exe", "--to-txt") == "\"C:\\folder with spaces\\app.exe\" --to-txt \"%1\"", "Shell quoting failed");
             WebpTests(directory);
+            TxpTests(directory);
             if (Array.IndexOf(args, "--registry") >= 0) RegistryTest();
             if (Array.IndexOf(args, "--render") >= 0)
             {
@@ -141,6 +144,20 @@ internal static class Tests
                 using (var key = root.OpenSubKey(@".webp\shell\PixelTxtConverter.ToTxt")) Assert(key == null, "WebP menu not removed");
                 using (var key = root.OpenSubKey(@".txt\shell\PixelTxtConverter.ToImage")) Assert(key == null, "Restore menu not removed");
                 using (var key = root.OpenSubKey(@".png\shell\UnrelatedApp")) Assert(key != null, "Removed unrelated menu");
+                using (var classes = root.CreateSubKey("Classes"))
+                {
+                    using (var extension = classes.CreateSubKey(".txp")) extension.SetValue("", "Previous.TxpApp");
+                    ShellIntegration.RegisterTxp(classes, executable);
+                    ShellIntegration.RegisterTxp(classes, executable);
+                    Assert(ShellIntegration.HasTxp(classes, executable), "TXP association missing");
+                    using (var command = classes.OpenSubKey(ShellIntegration.TxpProgId + @"\shell\open\command"))
+                        Assert((string)command.GetValue("") == ShellIntegration.Command(executable, "--to-image"), "TXP open command incorrect");
+                    ShellIntegration.UnregisterTxp(classes, @"C:\other\app.exe");
+                    Assert(ShellIntegration.HasTxp(classes, executable), "Wrong owner removed TXP association");
+                    ShellIntegration.UnregisterTxp(classes, executable);
+                    using (var extension = classes.OpenSubKey(".txp")) Assert((string)extension.GetValue("") == "Previous.TxpApp", "Uninstall did not restore previous TXP association");
+                    using (var type = classes.OpenSubKey(ShellIntegration.TxpProgId)) Assert(type == null, "TXP ProgID was not removed");
+                }
             }
             Console.WriteLine("PASS: isolated registry menu registration and removal.");
         }
@@ -190,5 +207,62 @@ internal static class Tests
             Assert(rejected && !File.Exists(invalid + ".txt"), "Invalid WebP created an output");
         }
         Console.WriteLine("PASS: embedded WebP decoder (lossless, lossy, alpha, Unicode, uppercase extension, malformed/oversized/animated input).");
+    }
+
+    private static void WaitUntil(Func<bool> condition, string message, int milliseconds = 10000)
+    {
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(milliseconds);
+        while (!condition() && DateTime.UtcNow < deadline) Thread.Sleep(50);
+        Assert(condition(), message);
+    }
+
+    private static void TxpTests(string directory)
+    {
+        string watched = Path.Combine(directory, "watch");
+        string nested = Path.Combine(watched, "한글 하위 폴더");
+        Directory.CreateDirectory(nested);
+        string text = "PIXELTXT/1/2/2\n255,0,0/0,255,0/0,0,255/255,255,255";
+        File.WriteAllText(Path.Combine(watched, "preexisting.txp"), text);
+        var outputs = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var failures = new ConcurrentDictionary<string, Exception>(StringComparer.OrdinalIgnoreCase);
+        using (var monitor = new TxpMonitor((path, output, error) =>
+        { if (error == null) outputs[path] = output; else failures[path] = error; }))
+        {
+            monitor.Watch(watched);
+            string txt = Path.Combine(nested, "이름 변경.txt");
+            string txp = Path.ChangeExtension(txt, ".TXP");
+            File.WriteAllText(txt, text);
+            File.Move(txt, txp);
+            WaitUntil(() => outputs.ContainsKey(txp), "Renaming TXT to TXP did not automatically generate PNG");
+            Assert(outputs[txp] == Path.ChangeExtension(txp, ".png"), "Automatic PNG filename incorrect");
+            using (var bitmap = new Bitmap(outputs[txp])) Assert(bitmap.GetPixel(0, 1).ToArgb() == Color.Blue.ToArgb(), "Automatic TXP pixel order incorrect");
+            Assert(File.ReadAllText(txp) == text, "Original TXP changed");
+            Assert(!File.Exists(Path.Combine(watched, "preexisting.png")), "Watcher unexpectedly scanned old files");
+
+            string collision = Path.Combine(watched, "existing.txp");
+            File.WriteAllText(Path.ChangeExtension(collision, ".png"), "KEEP");
+            File.WriteAllText(collision, text);
+            WaitUntil(() => outputs.ContainsKey(collision), "New TXP was not detected");
+            Assert(outputs[collision].EndsWith("existing (2).png"), "Existing PNG was overwritten");
+            Assert(File.ReadAllText(Path.ChangeExtension(collision, ".png")) == "KEEP", "Existing PNG content changed");
+
+            string locked = Path.Combine(watched, "writing.txp");
+            using (var writer = new StreamWriter(new FileStream(locked, FileMode.CreateNew, FileAccess.Write, FileShare.None)))
+            { Thread.Sleep(900); writer.Write(text); }
+            WaitUntil(() => outputs.ContainsKey(locked), "Locked/incomplete TXP was not retried");
+
+            string bad = Path.Combine(watched, "bad.txp");
+            File.WriteAllText(bad, "not pixel data");
+            WaitUntil(() => failures.ContainsKey(bad), "Malformed TXP did not report an error");
+            Assert(!File.Exists(Path.ChangeExtension(bad, ".png")), "Invalid TXP created an image");
+            File.WriteAllText(Path.Combine(watched, "ignored.txp.txt"), text);
+            Thread.Sleep(900);
+            Assert(outputs.Count == 3, "Duplicate notifications generated extra outputs");
+            Assert(Directory.GetFiles(nested, "*.png").Length == 1, "Rename created duplicate PNG files");
+        }
+        File.WriteAllText(Path.Combine(watched, "after-stop.txp"), text);
+        Thread.Sleep(800);
+        Assert(!File.Exists(Path.Combine(watched, "after-stop.png")), "Stopped watcher still converts files");
+        Console.WriteLine("PASS: actual TXT→TXP rename, nested folders, Unicode, new files, write retries, collision protection, invalid input and watcher shutdown.");
     }
 }

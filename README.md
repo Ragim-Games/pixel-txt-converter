@@ -1,18 +1,28 @@
 # Pixel TXT Converter
 
-Windows 파일 탐색기에서 **이미지 우클릭 → TXT Convert**를 누르면 이미지 옆에 RGB TXT를 저장하고 **메모장으로 바로 엽니다.** 저장한 TXT는 **우클릭 → TXT Restore (PNG)**로 다시 이미지로 복원할 수 있습니다.
+Windows 파일 탐색기에서 **이미지 우클릭 → TXT Convert**로 RGB TXT를 저장합니다. 그 TXT의 확장자를 **`.txp`로 바꾸면 같은 폴더에 PNG가 자동 생성**됩니다. 기존 **TXT Restore (PNG)** 우클릭 복원도 지원합니다.
 
 ## 설치와 사용 (Windows 10 / 11 · 64비트)
 
 [PixelTxtConverter.exe 다운로드](https://github.com/Ragim-Games/pixel-txt-converter/raw/refs/heads/main/PixelTxtConverter.exe)
 
 1. 이 저장소에 있는 **PixelTxtConverter.exe**를 다운로드하고 실행합니다. 저장소의 **Code → Download ZIP**으로 받아도 됩니다.
-2. **설치 / 메뉴 연결**을 누릅니다. 현재 사용자 계정에만 설치하므로 관리자 권한이 필요 없습니다.
+2. **설치 / 자동 변환 시작**을 누릅니다. 현재 사용자 계정에만 설치하므로 관리자 권한이 필요 없습니다.
 3. 파일 탐색기에서 이미지를 우클릭하고 **TXT Convert**를 누릅니다.
 4. 예를 들어 `사진.png` 옆에 `사진.png.txt`가 만들어지고 메모장이 열립니다.
-5. 해당 TXT에서 **TXT Restore (PNG)**를 누르면 `사진.png.restored.png`를 생성해 기본 이미지 앱으로 엽니다.
+5. 예를 들어 `그림.txt`를 **`그림.txp`**로 이름 변경하면 약 1초 후 **`그림.png`**가 같은 폴더에 생깁니다. 더블클릭할 필요가 없습니다.
 
-**기존 버전에서 WebP 메뉴가 없었다면:** 저장소의 최신 EXE를 다시 받아 실행하고 **설치 / 메뉴 연결**을 누르세요. 2.1 버전부터 `.webp` 메뉴와 디코더가 포함됩니다. 이미 열려 있던 우클릭 메뉴를 닫고 다시 열면 됩니다. EXE를 다운로드하기만 해서는 기존 설치가 갱신되지 않습니다.
+## TXP 자동 복원
+
+- `.txp`는 이 프로그램이 만든 RGB TXT와 **내용이 같은 파일**입니다. 첫 줄의 `PIXELTXT/1/가로/세로`를 포함한 내용을 그대로 두고 확장자만 바꿉니다.
+- Windows에서 파일 확장자를 표시한 뒤 마지막 `.txt`를 `.txp`로 바꾸세요. `그림.txp.txt`는 TXT이므로 자동 변환되지 않습니다.
+- 원본 TXP는 그대로 남고 PNG가 별도로 생성됩니다. PNG가 이미 있으면 `그림 (2).png`처럼 번호를 붙입니다.
+- 설치 시 현재 사용자 로그인 자동 시작과 알림 영역 프로그램이 등록됩니다. 프로그램이 실행 중일 때 로컬 고정/이동식 드라이브에서 새로 생성되거나 이름 변경된 `.txp`를 감지합니다. 새 드라이브 연결은 최대 약 10초 후 반영됩니다.
+- 기존 파일 전체를 검색하거나 변환하지 않습니다. 프로그램이 꺼져 있을 때 바꾼 파일, 네트워크 드라이브의 파일은 `.txp`를 더블클릭하거나 **TXP Restore (PNG)**로 수동 복원할 수 있습니다.
+- 파일을 쓰는 중이면 잠시 재시도합니다. 형식 오류나 권한 문제는 알림으로 안내하고 원본은 유지합니다. 감지 버퍼 초과 등으로 놓친 파일도 수동 복원할 수 있습니다.
+- 알림 영역 아이콘의 **이번 로그인 동안 자동 변환 종료**로 중지합니다. 다시 켜려면 설치 화면의 **설치 / 자동 변환 시작**을 누릅니다. **자동 변환 / 연결 해제**는 자동 시작과 파일 연결도 해제합니다.
+
+**기존 버전에서 업데이트:** 최신 EXE를 다시 받아 **설치 / 자동 변환 시작**을 누르세요. 2.2 버전부터 TXP 자동 복원이 포함됩니다. EXE를 다운로드하기만 해서는 기존 설치가 갱신되지 않습니다.
 
 **Windows 11에서는 우클릭 → 더 많은 옵션 안에 메뉴가 표시됩니다.** Windows 10에서는 기존 우클릭 메뉴에 표시됩니다. Windows 11의 첫 번째 간소화 메뉴에 직접 등록하는 MSIX/COM 확장 방식은 사용하지 않습니다. [Microsoft의 메뉴 안내](https://blogs.windows.com/blog/2021/07/19/extending-the-context-menu-and-share-dialog-in-windows-11/)
 
@@ -27,7 +37,7 @@ Windows 파일 탐색기에서 **이미지 우클릭 → TXT Convert**를 누르
 - 실행 파일: `%LOCALAPPDATA%\PixelTxtConverter\PixelTxtConverter.exe`.
 - 메뉴는 `HKCU\Software\Classes\SystemFileAssociations`의 지원 확장자 아래에 앱 전용 키로 등록합니다. 기본 이미지/TXT 연결 프로그램은 변경하지 않습니다.
 - 일반 TXT에도 복원 메뉴가 표시되지만, `PIXELTXT/1` 형식만 복원할 수 있습니다. 형식이 다르면 오류를 안내합니다.
-- 메뉴 연결 해제: 실행 파일의 **메뉴 연결 해제** 버튼 또는 Windows 설치된 앱의 **Pixel TXT Converter → 제거**를 사용합니다. 제거 후 EXE와 WebP 라이선스 파일은 설치 폴더에 남으므로 필요 없다면 직접 삭제할 수 있습니다.
+- 연결 해제: 실행 파일의 **자동 변환 / 연결 해제** 또는 Windows 설치된 앱의 **Pixel TXT Converter → 제거**를 사용합니다. 감지 프로그램, 로그인 자동 시작, 메뉴 및 앱이 등록한 TXP 연결을 해제합니다. 제거 후 EXE와 WebP 라이선스 파일은 설치 폴더에 남으므로 필요 없다면 직접 삭제할 수 있습니다.
 - 배포 EXE는 코드 서명되지 않은 빌드입니다.
 
 ## TXT 형식 (버전 1)
@@ -80,6 +90,7 @@ Windows PowerShell에서 실행합니다. Windows에 포함된 .NET Framework �
 | `PixelTxtConverter.exe` | 바로 실행 가능한 Windows 설치·변환 프로그램 |
 | `SHA256SUMS.txt` | 실행 파일의 SHA-256 검증 값 |
 | `windows/Core.cs` | Windows RGB TXT 인코딩/복원, 파일 보존 |
+| `windows/TxpMonitor.cs` | TXP 이름 변경·생성 감지, 자동 PNG 변환, 알림 영역 프로그램 |
 | `windows/WebpDecoder.cs`, `windows/vendor/webp/` | 내장 WebP 디코더 및 라이선스 |
 | `windows/ShellIntegration.cs` | 현재 사용자 설치 및 탐색기 메뉴 연결 |
 | `windows/Program.cs` | 설치 화면, 변환 진행 창, 메모장 자동 실행 |
