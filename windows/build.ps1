@@ -1,4 +1,4 @@
-param([switch]$Test)
+param([switch]$Test, [switch]$Package)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $outputDirectory = Join-Path $projectRoot 'dist'
@@ -19,4 +19,11 @@ if ($Test) {
     if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed.' }
     & $testExecutable
     if ($LASTEXITCODE -ne 0) { throw 'Windows tests failed.' }
+}
+if ($Package) {
+    $packagedExecutable = Join-Path $projectRoot 'PixelTxtConverter.exe'
+    Copy-Item -LiteralPath $executablePath -Destination $packagedExecutable -Force
+    $checksum = (Get-FileHash -LiteralPath $packagedExecutable -Algorithm SHA256).Hash.ToLowerInvariant()
+    Set-Content -LiteralPath (Join-Path $projectRoot 'SHA256SUMS.txt') -Value "$checksum  PixelTxtConverter.exe" -Encoding ascii
+    Write-Output "Packaged: $packagedExecutable"
 }

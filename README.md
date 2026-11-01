@@ -4,9 +4,9 @@ Windows 파일 탐색기에서 **이미지 우클릭 → TXT Convert**를 누르
 
 ## 설치와 사용 (Windows 10 / 11)
 
-[최신 Windows 버전 다운로드](https://github.com/Ragim-Games/pixel-txt-converter/releases/latest)
+[PixelTxtConverter.exe 다운로드](https://github.com/Ragim-Games/pixel-txt-converter/raw/refs/heads/main/PixelTxtConverter.exe)
 
-1. Releases에서 **PixelTxtConverter.exe**를 다운로드하고 실행합니다.
+1. 이 저장소에 있는 **PixelTxtConverter.exe**를 다운로드하고 실행합니다. 저장소의 **Code → Download ZIP**으로 받아도 됩니다.
 2. **설치 / 메뉴 연결**을 누릅니다. 현재 사용자 계정에만 설치하므로 관리자 권한이 필요 없습니다.
 3. 파일 탐색기에서 이미지를 우클릭하고 **TXT Convert**를 누릅니다.
 4. 예를 들어 `사진.png` 옆에 `사진.png.txt`가 만들어지고 메모장이 열립니다.
@@ -52,8 +52,6 @@ PIXELTXT/1/2/2
 
 ## 개발 및 검증
 
-### Windows 버전
-
 Windows PowerShell에서 실행합니다. Windows에 포함된 .NET Framework 컴파일러를 사용하므로 패키지 다운로드가 필요 없습니다.
 
 ```powershell
@@ -63,6 +61,8 @@ Windows PowerShell에서 실행합니다. Windows에 포함된 .NET Framework �
 
 `dist/PixelTxtConverter.exe`가 설치 화면과 변환 기능을 모두 포함합니다. 레지스트리 테스트는 실제 탐색기 연결 대신 별도의 임시 키에서 등록·해제를 검증합니다. GitHub Actions에서도 Windows 빌드와 테스트를 실행하며 EXE를 아티팩트로 제공합니다.
 
+저장소에 올릴 실행 파일과 SHA-256 검증 파일을 갱신하려면 `.\windows\build.ps1 -Test -Package`를 실행합니다. 루트의 `PixelTxtConverter.exe`와 `SHA256SUMS.txt`가 함께 갱신됩니다.
+
 설치 없이 명령줄로 변환할 수도 있습니다. 변환 후에는 결과 파일을 자동으로 엽니다.
 
 ```powershell
@@ -70,31 +70,13 @@ Windows PowerShell에서 실행합니다. Windows에 포함된 .NET Framework �
 .\dist\PixelTxtConverter.exe --to-image "C:\사진\이미지.png.txt"
 ```
 
-### 보조 브라우저 버전
-
-기존 브라우저 도구도 `index.html`로 남아 있으며 Windows 버전과 같은 TXT 형식을 사용합니다. `index.html`을 열어 이미지/TXT를 불러오고 다운로드할 수 있습니다. Node.js 18 이상에서 이 버전의 핵심 변환 테스트를 실행합니다.
-
-```sh
-npm test
-```
-
-브라우저 통합 테스트는 선택 사항입니다.
-
-```sh
-npm install --no-save playwright
-npx playwright install chromium
-node tests/browser.cjs
-```
-
-테스트는 픽셀 순서와 RGB 왕복 일치, 투명도, 여러 처리 묶음에 걸친 데이터, 잘못된 TXT, 실제 파일 입력과 다운로드, 모바일 가로 넘침을 검증합니다. 브라우저 테스트 스크린샷은 Git에서 제외된 `artifacts/`에 생성됩니다.
+테스트는 픽셀 순서와 RGB 왕복 일치, 투명도, 행 패딩, 한글·공백 파일명, 기존 파일 보존, 잘못된 TXT, 메뉴 등록·해제를 검증합니다.
 
 | 파일 | 역할 |
 | --- | --- |
+| `PixelTxtConverter.exe` | 바로 실행 가능한 Windows 설치·변환 프로그램 |
+| `SHA256SUMS.txt` | 실행 파일의 SHA-256 검증 값 |
 | `windows/Core.cs` | Windows RGB TXT 인코딩/복원, 파일 보존 |
 | `windows/ShellIntegration.cs` | 현재 사용자 설치 및 탐색기 메뉴 연결 |
 | `windows/Program.cs` | 설치 화면, 변환 진행 창, 메모장 자동 실행 |
 | `windows/build.ps1`, `windows/Tests.cs` | EXE 빌드 및 Windows 검증 |
-| `index.html`, `styles.css` | 한국어 인터페이스와 반응형 디자인 |
-| `codec.js` | 크기 검증, RGB TXT 인코딩 및 디코딩 |
-| `app.js` | 파일 입출력, 미리보기, 다운로드 및 픽셀 확인 |
-| `tests/` | Node.js 단위 테스트 및 브라우저 통합 테스트 |

@@ -1,6 +1,4 @@
-node_modules/
 dist/
 artifacts/
-test-results/
 .DS_Store
 Thumbs.db
