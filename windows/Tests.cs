@@ -87,6 +87,7 @@ internal static class Tests
                 Assert(!File.Exists(output), "Invalid input left a partial output");
             }
             Assert(ShellIntegration.Command(@"C:\folder with spaces\app.exe", "--to-txt") == "\"C:\\folder with spaces\\app.exe\" --to-txt \"%1\"", "Shell quoting failed");
+            WebpTests(directory);
             if (Array.IndexOf(args, "--registry") >= 0) RegistryTest();
             if (Array.IndexOf(args, "--render") >= 0)
             {
@@ -116,6 +117,11 @@ internal static class Tests
             using (var root = Registry.CurrentUser.CreateSubKey(testKey))
             {
                 ShellIntegration.RegisterVerbs(root, executable);
+                Assert(ShellIntegration.HasAllVerbs(root, executable), "Complete registration not recognized");
+                root.DeleteSubKeyTree(@".webp\shell\PixelTxtConverter.ToTxt");
+                Assert(!ShellIntegration.HasAllVerbs(root, executable), "Old install missing WebP incorrectly reported complete");
+                ShellIntegration.RegisterVerbs(root, executable);
+                Assert(ShellIntegration.HasAllVerbs(root, executable), "Reinstall did not repair WebP menu");
                 foreach (string extension in ShellIntegration.ImageExtensions)
                 {
                     using (var key = root.OpenSubKey(extension + @"\shell\PixelTxtConverter.ToTxt"))
@@ -132,11 +138,57 @@ internal static class Tests
                 using (var key = root.OpenSubKey(@".png\shell\PixelTxtConverter.ToTxt")) Assert(key != null, "Removed another install's menu");
                 ShellIntegration.UnregisterVerbs(root, executable);
                 using (var key = root.OpenSubKey(@".png\shell\PixelTxtConverter.ToTxt")) Assert(key == null, "Menu not removed");
+                using (var key = root.OpenSubKey(@".webp\shell\PixelTxtConverter.ToTxt")) Assert(key == null, "WebP menu not removed");
                 using (var key = root.OpenSubKey(@".txt\shell\PixelTxtConverter.ToImage")) Assert(key == null, "Restore menu not removed");
                 using (var key = root.OpenSubKey(@".png\shell\UnrelatedApp")) Assert(key != null, "Removed unrelated menu");
             }
             Console.WriteLine("PASS: isolated registry menu registration and removal.");
         }
         finally { Registry.CurrentUser.DeleteSubKeyTree(testKey, false); }
+    }
+
+    private static void WebpTests(string directory)
+    {
+        string fixtures = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "windows", "fixtures"));
+        string korean = Path.Combine(directory, "한글 공백 & 무손실.WEBP");
+        File.Copy(Path.Combine(fixtures, "colors.webp"), korean);
+        string txt = Converter.ToText(korean, korean + ".txt", null);
+        Assert(File.ReadAllText(txt) == "PIXELTXT/1/2/2\n255,0,0/0,255,0/0,0,255/255,255,255", "Lossless WebP or Unicode paths differ");
+        string restored = Converter.ToImage(txt, korean + ".png", null);
+        using (var bitmap = new Bitmap(restored)) Assert(bitmap.GetPixel(0, 1).ToArgb() == Color.Blue.ToArgb(), "WebP to TXT to PNG round trip failed");
+        string alpha = Converter.ToText(Path.Combine(fixtures, "alpha.webp"), Path.Combine(directory, "webp-alpha.txt"), null);
+        Assert(File.ReadAllText(alpha) == "PIXELTXT/1/3/1\n255,255,255/255,127,127/11,22,33", "WebP transparency differs");
+        string lossy = Converter.ToText(Path.Combine(fixtures, "lossy.webp"), Path.Combine(directory, "webp-lossy.txt"), null);
+        string lossyText = File.ReadAllText(lossy);
+        Assert(lossyText.StartsWith("PIXELTXT/1/8/4\n"), "Lossy VP8 dimensions differ");
+        Assert(lossyText.Substring(lossyText.IndexOf('\n') + 1).Split('/').Length == 32, "Lossy WebP pixel count differs");
+        string png = Converter.ToImage(lossy, lossy + ".png", null);
+        using (var bitmap = new Bitmap(png))
+        {
+            Color color = bitmap.GetPixel(0, 0);
+            Assert(color.R > 240 && color.G < 10 && color.B < 10, "Lossy WebP decoded incorrectly");
+        }
+        foreach (string kind in new[] { "oversized", "animated", "corrupt" })
+        {
+            string invalid = Path.Combine(directory, kind + ".webp");
+            if (kind == "corrupt") File.WriteAllText(invalid, "not a WebP image");
+            else using (var writer = new BinaryWriter(File.Create(invalid)))
+            {
+                writer.Write(Encoding.ASCII.GetBytes("RIFF")); writer.Write(22u);
+                writer.Write(Encoding.ASCII.GetBytes("WEBPVP8X")); writer.Write(10u);
+                writer.Write((byte)(kind == "animated" ? 2 : 0)); writer.Write(new byte[3]);
+                writer.Write(kind == "oversized" ? new byte[] { 255, 255, 255, 255, 255, 255 } : new byte[6]);
+            }
+            bool rejected = false;
+            try { Converter.ToText(invalid, invalid + ".txt", null); }
+            catch (InvalidDataException error)
+            {
+                rejected = true;
+                if (kind == "animated") Assert(error.Message.Contains("움직이는"), "Animated WebP error is unclear");
+                if (kind == "oversized") Assert(error.Message.Contains("4,194,304"), "Oversized WebP not rejected before decode");
+            }
+            Assert(rejected && !File.Exists(invalid + ".txt"), "Invalid WebP created an output");
+        }
+        Console.WriteLine("PASS: embedded WebP decoder (lossless, lossy, alpha, Unicode, uppercase extension, malformed/oversized/animated input).");
     }
 }

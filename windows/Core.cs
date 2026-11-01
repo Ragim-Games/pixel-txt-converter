@@ -42,7 +42,7 @@ namespace PixelTxtConverter
         public static string ToText(string input, string desiredOutput, Action<int> progress)
         {
             ValidateInput(input);
-            using (var source = Image.FromFile(input))
+            using (var source = WebpDecoder.OpenImage(input))
             {
                 ValidateSize(source.Width, source.Height);
                 using (var bitmap = new Bitmap(source.Width, source.Height, PixelFormat.Format24bppRgb))

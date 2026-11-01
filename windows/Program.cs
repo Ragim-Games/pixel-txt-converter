@@ -14,6 +14,11 @@ namespace PixelTxtConverter
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            if (args.Length == 1 && args[0] == "--install")
+            {
+                try { ShellIntegration.Install(); return 0; }
+                catch (Exception error) { ShowError(error); return 1; }
+            }
             if (args.Length == 0) { Application.Run(new SetupForm()); return 0; }
             if (args.Length == 1 && args[0] == "--uninstall")
             {
@@ -49,7 +54,7 @@ namespace PixelTxtConverter
 
         public SetupForm()
         {
-            Text = "Pixel TXT Converter 설치";
+            Text = "Pixel TXT Converter 2.1 · 설치 / 복구";
             ClientSize = new Size(500, 350);
             Font = new Font("Malgun Gothic", 10);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -57,7 +62,7 @@ namespace PixelTxtConverter
             StartPosition = FormStartPosition.CenterScreen;
             AutoScaleMode = AutoScaleMode.Dpi;
             var title = new Label { Text = "이미지 우클릭 → TXT Convert", Location = new Point(24, 24), Size = new Size(450, 36), Font = new Font(Font.FontFamily, 17, FontStyle.Bold) };
-            var description = new Label { Text = "이미지 옆에 RGB TXT를 저장하고 메모장으로 엽니다.\nTXT 우클릭 → TXT Restore (PNG)로 이미지도 복원합니다.\n\nWindows 11: 우클릭 → 더 많은 옵션에서 표시됩니다.\n현재 사용자에게만 설치되며 관리자 권한은 필요 없습니다.", Location = new Point(24, 76), Size = new Size(450, 134) };
+            var description = new Label { Text = "PNG · JPG · WebP 등 이미지 → RGB TXT → 메모장\nTXT 우클릭 → TXT Restore (PNG)로 이미지도 복원합니다.\n\nWindows 10: 우클릭 메뉴 / Windows 11: 더 많은 옵션\nWebP 디코더 내장 · Windows 10/11 64비트 지원", Location = new Point(24, 76), Size = new Size(450, 134) };
             state.SetBounds(24, 216, 450, 38);
             RefreshState();
             var install = new Button { Text = "설치 / 메뉴 연결", Location = new Point(24, 270), Size = new Size(210, 44) };
@@ -75,7 +80,7 @@ namespace PixelTxtConverter
             Controls.AddRange(new Control[] { title, description, state, install, uninstall });
         }
 
-        private void RefreshState() { state.Text = ShellIntegration.IsInstalled() ? "상태: 파일 탐색기 메뉴에 연결되어 있습니다." : "상태: 설치되지 않았습니다."; }
+        private void RefreshState() { state.Text = ShellIntegration.IsInstalled() ? "상태: WebP를 포함한 모든 메뉴가 연결되어 있습니다." : "상태: 설치 또는 업데이트가 필요합니다."; }
     }
 
     internal sealed class ConvertForm : Form
