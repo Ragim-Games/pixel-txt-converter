@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <title>Pixel TXT · 픽셀을 기록하다</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="codec.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./index.html"><span class="brand-icon" aria-hidden="true">▦</span> pixel<span class="brand-light">txt</span></a>
+    <span class="local-badge"><i></i> 내 기기에서만 처리</span>
+  </header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">EVERY PIXEL, IN PLAIN TEXT</p>
+      <h1>이미지를 기록하는<br>가장 작은 단위.</h1>
+      <p class="subtitle">왼쪽 위 첫 픽셀부터 마지막 픽셀까지.<br>이미지를 RGB 텍스트로 저장하고, 다시 이미지로 불러오세요.</p>
+    </section>
+    <div class="workspace">
+      <section class="controls card" aria-label="변환 도구">
+        <div class="section-title"><span class="step">01</span><h2>파일 불러오기</h2></div>
+        <div class="tabs" role="group" aria-label="불러올 파일 종류">
+          <button id="image-tab" class="tab active" aria-pressed="true">이미지 → TXT</button>
+          <button id="text-tab" class="tab" aria-pressed="false">TXT → 이미지</button>
+        </div>
+        <label id="dropzone" class="dropzone">
+          <span class="upload-icon" aria-hidden="true">↥</span>
+          <strong id="upload-title">이미지를 여기에 놓으세요</strong>
+          <span id="upload-help">PNG, JPG, WebP 등 · 최대 4,194,304픽셀</span>
+          <span class="choose-file">파일 선택하기 <span aria-hidden="true">↗</span></span>
+          <input id="file-input" type="file" accept="image/*" aria-label="이미지 파일 선택">
+        </label>
+        <div class="file-info" id="file-info" hidden><span id="file-name"></span><span id="file-size"></span></div>
+        <div class="section-title output-title"><span class="step">02</span><h2>변환 결과 저장</h2></div>
+        <button id="download-txt" class="button primary" disabled>TXT 다운로드 <span aria-hidden="true">↓</span></button>
+        <button id="download-png" class="button secondary" disabled>PNG 이미지 다운로드 <span aria-hidden="true">↓</span></button>
+        <p class="note">RGB 형식은 투명도를 저장하지 않습니다.<br>투명한 영역은 흰색 배경과 합쳐집니다.</p>
+        <div id="status" class="status" role="status" aria-live="polite">파일을 선택하면 변환이 시작됩니다.</div>
+        <progress id="progress" max="1" value="0" aria-label="변환 진행률" hidden></progress>
+      </section>
+      <section class="preview card" aria-label="이미지 미리보기">
+        <div class="preview-heading"><div class="section-title"><span class="status-dot"></span><h2>미리보기</h2></div><span id="dimensions" class="dimensions">아직 파일이 없어요</span></div>
+        <div id="canvas-area" class="canvas-area">
+          <div id="empty-state" class="empty-state"><div class="pixel-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><strong>모든 픽셀에는 이야기가 있어요.</strong><p>파일을 불러오면 여기에 표시됩니다.</p><button id="demo-button">샘플 이미지로 시작하기 →</button></div>
+          <canvas id="preview-canvas" aria-label="변환된 이미지 미리보기" hidden></canvas>
+        </div>
+        <div class="pixel-readout"><span id="pixel-position">픽셀을 클릭해 RGB 값을 확인하세요</span><span id="pixel-value">R — &nbsp; G — &nbsp; B —</span></div>
+      </section>
+    </div>
+    <section class="format card">
+      <div class="format-heading"><div><p class="eyebrow">A SIMPLE, OPEN FORMAT</p><h2>픽셀 하나, RGB 한 묶음.</h2></div><span class="format-tag">.txt</span></div>
+      <p class="format-description">첫 줄에는 이미지 크기, 다음 줄에는 <b>R,G,B</b> 값을 <b>/</b>로 구분해 기록합니다.<br>오른쪽 끝에 도달하면 다음 행의 왼쪽부터 이어집니다.</p>
+      <pre id="text-preview" aria-label="TXT 내용 미리보기">PIXELTXT/1/2/2
+255,0,0/0,255,0/0,0,255/255,255,255</pre>
+      <div class="format-footer"><span id="text-caption">예시 · 2 × 2 이미지</span><span>왼쪽 → 오른쪽 · 위 → 아래</span></div>
+    </section>
+  </main>
+  <footer><span>pixel txt</span><span>업로드 없이, 서버 없이. 파일은 이 브라우저 안에서만 처리됩니다.</span></footer>
+</body>
+</html>
