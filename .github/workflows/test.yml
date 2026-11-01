@@ -1,18 +1,20 @@
-name: Test
+name: Python tests
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
   windows:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
-      - name: Build and test Windows app
-        shell: powershell
-        run: ./windows/build.ps1 -Test
-      - name: Verify isolated registry registration
-        run: ./dist/WindowsTests.exe --registry
-      - uses: actions/upload-artifact@v4
+      - uses: actions/setup-python@v5
         with:
-          name: PixelTxtConverter-Windows
-          path: dist/PixelTxtConverter.exe
+          python-version: '${{ matrix.python-version }}'
+      - run: python -m pip install -r requirements.txt
+      - name: Conversion, watcher and isolated registry tests
+        env:
+          PIXELTXT_REGISTRY_TEST: '1'
+        run: python -m unittest discover -s tests -v
