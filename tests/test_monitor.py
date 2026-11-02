@@ -18,7 +18,7 @@ class MonitorTests(unittest.TestCase):
     def test_actual_rename_creation_retry_and_shutdown(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
-            nested = root / "한글 폴더"
+            nested = root / "\u2603 folder"
             nested.mkdir()
             (root / "old.txp").write_text(TEXT)
             results, errors = {}, {}
@@ -26,7 +26,7 @@ class MonitorTests(unittest.TestCase):
                 (errors if error else results)[source] = error or output
             with TxpMonitor(completed) as monitor:
                 monitor.watch(root)
-                txt = nested / "그림.txt"
+                txt = nested / "image.txt"
                 txp = txt.with_suffix(".TXP")
                 txt.write_text(TEXT)
                 txt.rename(txp)

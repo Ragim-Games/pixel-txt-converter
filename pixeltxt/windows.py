@@ -47,8 +47,9 @@ def python_windowless():
     return candidate if candidate.exists() else Path(sys.executable)
 
 
-def command(script, action, file_argument=True):
-    result = subprocess.list2cmdline([str(python_windowless()), str(script), action])
+def command(script, action, file_argument=True, windowless=True):
+    interpreter = python_windowless() if windowless else Path(sys.executable)
+    result = subprocess.list2cmdline([str(interpreter), str(script), action])
     return result + (' "%1"' if file_argument else "")
 
 
@@ -109,7 +110,7 @@ def register(root, script):
     _set(root, PROG_ID, {"": "TXP RGB Image", OWNER: str(script)})
     _set(root, PROG_ID + r"\DefaultIcon", {"": f'"{python_windowless()}",0'})
     _set(root, PROG_ID + r"\shell", {"": "open"})
-    _set(root, PROG_ID + r"\shell\open", {"": "PNG 이미지로 복원"})
+    _set(root, PROG_ID + r"\shell\open", {"": "Restore as PNG image"})
     _set(root, PROG_ID + r"\shell\open\command", {"": command(script, "--to-image")})
 
 
@@ -176,7 +177,7 @@ def stop_watcher():
             return
         _kernel.CloseHandle(mutex)
         time.sleep(0.1)
-    raise RuntimeError("자동 변환 종료가 지연되고 있습니다. 잠시 후 다시 시도해 주세요.")
+    raise RuntimeError("Automatic conversion is taking longer than expected to stop. Try again shortly.")
 
 
 def start_watcher(script):
@@ -189,7 +190,7 @@ def start_watcher(script):
             if ready:
                 return
         time.sleep(0.1)
-    raise RuntimeError(f"자동 변환 시작 실패. {INSTALL_DIR / 'python.log'} 파일을 확인해 주세요.")
+    raise RuntimeError(f"Could not start automatic conversion. Check {INSTALL_DIR / 'python.log'}.")
 
 
 def local_drives():
@@ -215,12 +216,12 @@ def install(project):
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CLASSES) as root:
         register(root, script)
         if not registered(root, script):
-            raise RuntimeError("탐색기 메뉴 연결을 확인하지 못했습니다.")
+            raise RuntimeError("Could not verify Explorer menu registration.")
     _set(winreg.HKEY_CURRENT_USER, RUN, {"PixelTxtConverter": command(script, "--watch", False)})
     _set(winreg.HKEY_CURRENT_USER, UNINSTALL, {
         "DisplayName": "Pixel TXT Converter (Python)", "DisplayVersion": __version__,
         "Publisher": "Ragim-Games", "InstallLocation": str(SOURCE_DIR),
-        "DisplayIcon": str(python_windowless()), "UninstallString": command(script, "--uninstall", False),
+        "DisplayIcon": str(python_windowless()), "UninstallString": command(script, "--uninstall", False, windowless=False),
         "NoModify": 1, "NoRepair": 1,
     })
     ctypes.windll.shell32.SHChangeNotify(0x08000000, 0, None, None)

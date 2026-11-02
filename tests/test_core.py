@@ -16,7 +16,7 @@ class CoreTests(unittest.TestCase):
         self.root = Path(self.temp.name)
 
     def test_exact_pixel_order_and_roundtrip(self):
-        source = self.root / "한글 공백 & 사진.png"
+        source = self.root / "\u2603 image & spaces.png"
         with Image.new("RGB", (2, 2)) as image:
             image.putdata(COLORS)
             image.save(source)
@@ -27,12 +27,12 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(image.tobytes(), bytes(channel for color in COLORS for channel in color))
 
     def test_txp_name_and_existing_output_preserved(self):
-        source = self.root / "그림.TXP"
+        source = self.root / "\u2603 image.TXP"
         source.write_text(TEXT)
         expected = source.with_suffix(".png")
         expected.write_bytes(b"keep me")
         output = to_image(source)
-        self.assertEqual(output.name, "그림 (2).png")
+        self.assertEqual(output.name, "\u2603 image (2).png")
         self.assertEqual(expected.read_bytes(), b"keep me")
         self.assertEqual(source.read_text(), TEXT)
 

@@ -1,93 +1,139 @@
-# Pixel TXT Converter · Python
+# Pixel TXT Converter
 
-Windows 10/11에서 이미지를 우클릭해 RGB TXT로 저장하고, **`.txt`를 `.txp`로 바꾸면 PNG를 자동 생성**하는 Python 소스 프로젝트입니다. EXE 빌드나 별도 WebP 실행 파일을 배포하지 않습니다.
+A Python app for Windows 10/11 that converts images to editable RGB text through Explorer. Rename a `.txt` file to `.txp` to automatically restore it as a PNG in the same folder.
 
-## 시작하기
+Installation runs entirely in **Command Prompt (CMD)**. Normal use stays in Explorer and the notification area; there is no graphical setup window or separate WebP executable.
 
-Python **3.11 이상**(tkinter 포함)을 설치하고 저장소를 다운로드한 뒤 저장소 폴더에서 실행합니다.
+## Install from CMD
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe main.py
+1. Install **Python 3.11 or later** with pip and Tcl/Tk (tkinter). Enable **Add Python to PATH** in the Python installer.
+2. Download and extract this repository to a folder you intend to keep.
+3. Open **Command Prompt**, switch to that folder, and run:
+
+```bat
+cd /d "C:\Tools\pixel-txt-converter"
+install.cmd
 ```
 
-설치 화면에서 **설치 / 자동 변환 시작**을 누르면 우클릭 메뉴, TXP 파일 연결, 로그인 자동 시작이 현재 사용자에게 등록됩니다. 관리자 권한은 필요 없습니다.
+Replace the example path with your extracted folder. Setup creates `.venv`, installs the dependencies, registers Explorer commands and the TXP file association for the current user, enables startup at Windows login, and starts automatic conversion. Administrator privileges are not required. Internet access is needed to download dependencies.
 
-의존성은 Pillow(이미지/WebP), watchdog(파일 감지), pystray(알림 영역)입니다. 소스는 `%LOCALAPPDATA%\PixelTxtConverter\python`에 복사됩니다. 등록된 명령은 설치에 사용한 **Python 인터프리터 또는 가상환경**을 참조하므로 해당 Python/`.venv`를 삭제하지 마세요. 소스를 업데이트한 후에는 설치를 다시 실행해야 적용됩니다.
+Setup uses `python` from PATH, falling back to `py -3`, or reuses an existing `.venv`. Errors appear in CMD and return a nonzero exit code. Fix the reported problem and rerun `install.cmd` if setup fails.
 
-기존 C# 버전이 설치되어 있으면 설치 과정에서 기존 감지 프로그램을 종료하고 Python 연결로 교체합니다. 성공 후 앱이 사용하던 이전 EXE와 디코더 라이선스 파일만 정리합니다.
+The app source is copied to `%LOCALAPPDATA%\PixelTxtConverter\python`. Registered commands use the Python interpreter in the original folder's `.venv`, so **keep that folder, its `.venv`, and the base Python installation in place**. To update, replace the project source and run `install.cmd` again.
 
-## 사용 방법
+If the previous C# version is installed, setup stops its watcher and replaces its registrations. After successful startup, it removes only the app's old executable and decoder license files.
 
-1. 이미지 우클릭 → **TXT Convert**: `사진.png.txt`를 저장하고 메모장으로 엽니다.
-2. 이 TXT의 확장자를 **`.txp`**로 바꿉니다. 예: `그림.txt` → `그림.txp`.
-3. 자동 변환 프로그램이 실행 중이면 같은 폴더에 **`그림.png`**가 생성됩니다. 더블클릭할 필요 없습니다.
-4. TXT/TXP 우클릭 → **TXT Restore (PNG)** / **TXP Restore (PNG)** 또는 TXP 더블클릭으로도 복원할 수 있습니다.
+## Use in Explorer
 
-Windows 11의 우클릭 항목은 **더 많은 옵션**에 표시됩니다. 파일 확장자를 표시한 뒤 마지막 `.txt`를 바꾸세요. `그림.txp.txt`는 자동 변환되지 않습니다.
+1. Right-click an image and select **TXT Convert**. The app saves `photo.png.txt` and opens it in Notepad.
+2. Edit the RGB values if needed, keeping the size header and pixel count intact.
+3. Change the final `.txt` extension to `.txp`. For example, rename `photo.png.txt` to `photo.png.txp`.
+4. The background watcher creates `photo.png.png` in the same folder. For a simpler output name, rename the text file to `photo.txp` to produce `photo.png`.
 
-TXP는 아래 RGB TXT와 내용이 동일한 파일입니다. 첫 줄의 이미지 크기를 유지해야 합니다. 원본 TXT/TXP/이미지를 보존하며, 출력 이름이 겹치면 `(2)`, `(3)`을 붙입니다.
+You can also right-click TXT/TXP files and select **TXT Restore (PNG)** or **TXP Restore (PNG)**, or double-click a TXP file.
 
-## 자동 변환
+On Windows 11, the commands appear under **Show more options**. Enable file name extensions in Explorer so you can change the final extension: `photo.txp.txt` is still a TXT file and will not trigger automatic conversion.
 
-- 설치 시 즉시 시작되고 다음 Windows 로그인에도 Python으로 실행됩니다.
-- 로컬 고정/이동식 드라이브에서 새로 생성되거나 이름이 바뀐 TXP만 감지합니다. 기존 파일 전체를 검색하지 않습니다.
-- 새 드라이브 연결은 최대 약 10초 후 반영됩니다. 네트워크 폴더는 수동 복원을 사용하세요.
-- 파일이 저장 중이면 잠시 재시도합니다. 오류는 알림과 `%LOCALAPPDATA%\PixelTxtConverter\python.log`에 기록합니다.
-- 알림 영역의 **이번 로그인 동안 자동 변환 종료**로 중지합니다. 다시 켜려면 설치 화면의 시작 버튼을 누릅니다.
-- 설치 화면의 **자동 변환 / 연결 해제**는 감지 프로그램, 로그인 자동 시작, 앱의 메뉴/파일 연결을 해제합니다. Python 소스와 사용자 파일은 남습니다.
-- 프로그램이 꺼져 있었거나 대량 파일 작업 중 감지되지 않은 TXP는 수동 복원하세요.
+Source images and TXT/TXP files are preserved. Existing output files are never overwritten; the app adds ` (2)`, ` (3)`, and so on when a name is already taken. Manual TXT restoration uses `photo.restored.png`; TXP restoration uses `photo.png`.
 
-## TXT / TXP 형식
+## Automatic conversion
+
+- Starts after installation and at subsequent Windows logins.
+- Watches newly created or renamed TXP files on local fixed and removable drives. It does not scan existing files.
+- Detects newly attached drives within about 10 seconds. Use manual restoration for network folders.
+- Retries briefly when a file is still being written. Failures appear in notifications and `%LOCALAPPDATA%\PixelTxtConverter\python.log`.
+- Select **Stop automatic conversion for this login** from the tray icon to stop the watcher. Startup at the next login remains enabled.
+- Restore files manually if they were created while the watcher was stopped or missed during a large file operation.
+
+To restart the installed watcher from CMD:
+
+```bat
+.venv\Scripts\python.exe main.py --start-watcher
+```
+
+## Uninstall from CMD
+
+From the original project folder, run:
+
+```bat
+uninstall.cmd
+```
+
+This stops the watcher and removes the app's login startup entry, Explorer commands, and TXP association, restoring the previous association where possible. Installed source files and all user images, TXT files, and TXP files remain. After a successful uninstall, you may delete the project folder and `%LOCALAPPDATA%\PixelTxtConverter` if no longer needed.
+
+The app also registers an uninstall entry in Windows Settings. Uninstallation uses the console and does not require a setup dialog.
+
+## TXT / TXP format
+
+TXT and TXP contain the same UTF-8 text; only the extension changes.
 
 ```text
 PIXELTXT/1/2/2
 255,0,0/0,255,0/0,0,255/255,255,255
 ```
 
-첫 줄은 `PIXELTXT/1/가로/세로`, 다음 줄은 `R,G,B` 묶음을 `/`로 나눈 데이터입니다. 왼쪽 위부터 오른쪽으로 읽고, 행이 끝나면 다음 행의 왼쪽으로 이동합니다. 마지막에는 `/`를 붙이지 않습니다. 각 채널은 0~255 정수입니다.
+The first line is `PIXELTXT/1/width/height`. The remaining data consists of `R,G,B` entries separated by `/`, ordered left to right and top to bottom. Do not add a trailing `/`. Each channel must be an integer from 0 to 255.
 
-UTF-8을 사용하며, 불러올 때 BOM, CRLF와 RGB 묶음 앞뒤 공백을 허용합니다. 잘못된 크기, 값, 픽셀 수는 오류로 안내합니다.
+The reader accepts a UTF-8 BOM, CRLF line endings, and whitespace around RGB entries. Invalid dimensions, channel values, and pixel counts produce an error.
 
-## 지원 범위
+## Supported images and limits
 
-- PNG, JPG/JPEG/JFIF, BMP, GIF, TIFF, ICO, 정지 WebP(손실·무손실·투명).
-- WebP는 Pillow의 코덱으로 처리합니다. 별도 `dwebp.exe`가 필요 없습니다.
-- 투명도는 흰색과 합성합니다. 애니메이션 WebP는 지원하지 않으며 GIF/TIFF는 첫 프레임을 사용합니다.
-- 최대 4,194,304픽셀, 한 변 16,384픽셀, 입력 파일 64 MiB. 해상도를 임의로 줄이지 않습니다.
-- 압축 원본 바이트, 메타데이터, 색상 프로파일을 보존하는 형식이 아닙니다.
-- 탐색기 연결과 알림 영역은 Windows 10/11용입니다. 변환 함수는 Windows 전용 API와 분리되어 있습니다.
+- PNG, JPG/JPEG/JFIF, BMP, GIF, TIFF, ICO, and still WebP (lossy, lossless, and transparent).
+- WebP decoding uses Pillow; no separate `dwebp.exe` is required.
+- Transparency is composited onto white. Animated WebP is rejected; GIF and TIFF use the first frame.
+- Maximum image size: 4,194,304 pixels total and 16,384 pixels on either side. Maximum input file size: 64 MiB. Images are never silently resized.
+- The text format stores RGB pixels, not original compressed bytes, metadata, or color profiles.
+- Explorer integration and the tray watcher require Windows 10/11. Conversion functions are independent of Windows-specific APIs.
 
-## 명령줄과 테스트
+Dependencies: Pillow for image decoding, watchdog for file events, and pystray for the notification-area icon.
 
-```powershell
-python main.py --install
-python main.py --to-txt "C:\사진\그림.webp"
-python main.py --to-image "C:\사진\그림.txp"
-python main.py --to-image "C:\사진\그림.txp" --no-open
-python main.py --stop-watcher
-python -m unittest discover -s tests -v
+## Command line
+
+Run these commands from the project folder in CMD after installing:
+
+```bat
+.venv\Scripts\python.exe main.py --help
+.venv\Scripts\python.exe main.py --version
+.venv\Scripts\python.exe main.py --to-txt "C:\Pictures\photo.webp"
+.venv\Scripts\python.exe main.py --to-image "C:\Pictures\photo.txp"
+.venv\Scripts\python.exe main.py --to-image "C:\Pictures\photo.txp" --no-open
+.venv\Scripts\python.exe main.py --stop-watcher
+.venv\Scripts\python.exe main.py --start-watcher
 ```
 
-가상환경을 사용했다면 `python` 대신 `.\.venv\Scripts\python.exe`를 쓰세요. 테스트 전에는 기존 자동 변환을 종료해 테스트 파일이 두 번 처리되지 않게 합니다. 테스트 후에는 `python main.py --install`로 다시 시작할 수 있습니다.
+`--no-open` saves the output without opening Notepad or the default image viewer. Running `main.py` without arguments prints help. `--install` and `--uninstall` expose the registration steps for scripting; `install.cmd` also prepares the Python environment and dependencies.
 
-선택적인 레지스트리 테스트는 실제 탐색기 연결을 바꾸지 않고 임시 키에서 검증합니다.
+## Tests
 
-```powershell
-$env:PIXELTXT_REGISTRY_TEST = '1'
-python -m unittest discover -s tests -v
+Stop an installed watcher before testing so it cannot process test files a second time:
+
+```bat
+.venv\Scripts\python.exe main.py --stop-watcher
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+.venv\Scripts\python.exe main.py --start-watcher
 ```
 
-GitHub Actions에서 Python 3.11/3.12/3.13으로 검증합니다. Windows 10의 파일 이벤트 호환성을 확인한 watchdog 6.0.0을 사용합니다.
+Optional registry tests use a temporary key and do not alter real Explorer associations. Enable them in CMD with:
 
-| 경로 | 역할 |
+```bat
+set "PIXELTXT_REGISTRY_TEST=1"
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+set "PIXELTXT_REGISTRY_TEST="
+```
+
+GitHub Actions runs the tests on Windows with Python 3.11, 3.12, and 3.13. The suite covers exact RGB round trips, Unicode paths, WebP, malformed input, real file rename events, console commands, and isolated registration/removal. The project pins watchdog 6.0.0.
+
+## Project layout
+
+| Path | Purpose |
 | --- | --- |
-| `main.py` | 실행 진입점 |
-| `pixeltxt/core.py` | 이미지↔RGB TXT/TXP 변환 |
-| `pixeltxt/monitor.py` | TXP 생성/이름 변경 감지 |
-| `pixeltxt/windows.py` | Python 소스 설치, 파일 연결, 자동 시작 |
-| `pixeltxt/tray.py` | 알림 영역과 감지 프로그램 수명 관리 |
-| `pixeltxt/app.py` | 설치 화면과 명령줄 |
-| `requirements.txt` | Python 의존성 |
-| `tests/` | 변환·WebP·실제 이름 변경·등록/해제 검증 |
+| `install.cmd` | CMD environment setup, dependency installation, and app registration |
+| `uninstall.cmd` | CMD removal of automatic conversion and Explorer integration |
+| `main.py` | Entry point |
+| `pixeltxt/core.py` | Image and RGB TXT/TXP conversion |
+| `pixeltxt/monitor.py` | TXP creation and rename detection |
+| `pixeltxt/windows.py` | Source installation, file associations, and login startup |
+| `pixeltxt/tray.py` | Tray icon and watcher lifecycle |
+| `pixeltxt/app.py` | Console commands and conversion error dialogs |
+| `requirements.txt` | Python dependencies |
+| `tests/` | Conversion, watcher, CLI, and registry tests |

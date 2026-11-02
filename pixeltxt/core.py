@@ -14,13 +14,13 @@ HEADER = re.compile(r"PIXELTXT/1/([1-9][0-9]*)/([1-9][0-9]*)\Z")
 
 def validate_size(width, height):
     if not (1 <= width <= MAX_SIDE and 1 <= height <= MAX_SIDE and width * height <= MAX_PIXELS):
-        raise ValueError("이미지는 최대 4,194,304픽셀, 한 변은 16,384픽셀까지 지원합니다.")
+        raise ValueError("Images support at most 4,194,304 pixels and 16,384 pixels per side.")
 
 
 def validate_input(path):
     path = Path(path)
     if path.stat().st_size > MAX_BYTES:
-        raise ValueError("입력 파일은 최대 64 MiB까지 지원합니다.")
+        raise ValueError("Input files must not exceed 64 MiB.")
     return path
 
 
@@ -36,7 +36,7 @@ def new_output(desired):
         except FileExistsError:
             continue
     else:
-        raise FileExistsError("같은 이름의 출력 파일이 너무 많습니다.")
+        raise FileExistsError("Too many output files already use this name.")
     try:
         with stream:
             yield actual, stream
@@ -51,7 +51,7 @@ def to_text(source, output=None):
     with Image.open(source, formats=["PNG", "JPEG", "BMP", "GIF", "TIFF", "ICO", "WEBP"]) as original:
         validate_size(*original.size)
         if original.format == "WEBP" and getattr(original, "is_animated", False):
-            raise ValueError("움직이는 WebP는 지원하지 않습니다. 정지 이미지 WebP를 사용해 주세요.")
+            raise ValueError("Animated WebP is not supported. Use a still WebP image.")
         original.seek(0)
         with original.convert("RGBA") as rgba, Image.new("RGBA", original.size, "white") as white:
             with Image.alpha_composite(white, rgba).convert("RGB") as image:
@@ -72,10 +72,10 @@ def _tokens(stream):
         carry = fields.pop()
         for field in fields:
             if len(field) > 32:
-                raise ValueError("RGB 항목이 너무 길거나 구분자가 없습니다.")
+                raise ValueError("An RGB entry is too long or a separator is missing.")
             yield field.strip()
         if len(carry) > 32:
-            raise ValueError("RGB 항목이 너무 길거나 구분자가 없습니다.")
+            raise ValueError("An RGB entry is too long or a separator is missing.")
     yield carry.strip()
 
 
@@ -87,7 +87,7 @@ def to_image(source, output=None):
         line = stream.readline(101)
         match = HEADER.fullmatch(line.strip())
         if not line.endswith("\n") or not match:
-            raise ValueError("첫 줄은 PIXELTXT/1/가로/세로 형식이어야 합니다.")
+            raise ValueError("The first line must use the format PIXELTXT/1/width/height.")
         width, height = map(int, match.groups())
         validate_size(width, height)
         count = width * height
@@ -95,15 +95,15 @@ def to_image(source, output=None):
         seen = 0
         for seen, token in enumerate(_tokens(stream), start=1):
             if seen > count:
-                raise ValueError("픽셀 수가 너무 많거나 끝에 불필요한 /가 있습니다.")
+                raise ValueError("Too many pixels or an unexpected trailing / separator.")
             if not CHANNELS.fullmatch(token):
-                raise ValueError(f"{seen}번째 픽셀은 0~255 범위의 R,G,B 값이어야 합니다.")
+                raise ValueError(f"Pixel {seen} must contain R,G,B integers between 0 and 255.")
             channels = tuple(map(int, token.split(",")))
             if max(channels) > 255:
-                raise ValueError(f"{seen}번째 픽셀의 RGB 값이 255를 초과합니다.")
+                raise ValueError(f"An RGB value in pixel {seen} exceeds 255.")
             data[(seen - 1) * 3:seen * 3] = bytes(channels)
         if seen != count:
-            raise ValueError("픽셀 수가 가로 × 세로보다 적습니다.")
+            raise ValueError("The pixel count is less than width times height.")
     with Image.frombytes("RGB", (width, height), bytes(data)) as image:
         with new_output(output) as (actual, stream):
             image.save(stream, format="PNG")

@@ -7,7 +7,6 @@ import subprocess
 import sys
 
 from . import __version__
-from .core import to_image, to_text
 
 
 def _message(text, error=False):
@@ -19,49 +18,21 @@ def _message(text, error=False):
     root.destroy()
 
 
-def _setup():
-    import tkinter as tk
-    from tkinter import ttk, messagebox
-    from .windows import install, uninstall
-    root = tk.Tk()
-    root.title(f"Pixel TXT Converter {__version__} · Python")
-    root.resizable(False, False)
-    frame = ttk.Frame(root, padding=24)
-    frame.pack(fill="both", expand=True)
-    ttk.Label(frame, text="이미지 ↔ RGB TXT / TXP", font=("Malgun Gothic", 16, "bold")).pack(anchor="w")
-    ttk.Label(frame, text="이미지 우클릭 → TXT Convert → RGB TXT 저장\n.txt를 .txp로 변경 → 같은 폴더에 PNG 자동 생성\n\n설치하면 Python 자동 변환 프로그램이 로그인 시 실행됩니다.\n로컬 드라이브의 새 TXP를 감지하며 알림 영역에서 종료합니다.\nWindows 11 우클릭 메뉴는 ‘더 많은 옵션’에 표시됩니다.", padding=(0, 18)).pack(anchor="w")
-    state = tk.StringVar(value="Python 소스 버전 · PNG/JPG/WebP 등 지원")
-    ttk.Label(frame, textvariable=state).pack(anchor="w", pady=(0, 12))
-
-    def action(remove=False):
-        if remove and not messagebox.askyesno("연결 해제", "자동 변환과 파일 연결을 해제할까요? 원본 파일은 유지됩니다.", parent=root):
-            return
-        try:
-            if remove:
-                uninstall()
-            else:
-                install(Path(__file__).resolve().parent.parent)
-            state.set("연결을 해제했습니다." if remove else "설치 완료 · TXP 자동 변환이 실행 중입니다.")
-        except Exception as error:
-            messagebox.showerror("처리 실패", str(error), parent=root)
-
-    buttons = ttk.Frame(frame)
-    buttons.pack(fill="x")
-    ttk.Button(buttons, text="설치 / 자동 변환 시작", command=action).pack(side="left", padx=(0, 12))
-    ttk.Button(buttons, text="자동 변환 / 연결 해제", command=lambda: action(True)).pack(side="left")
-    root.mainloop()
-
-
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="이미지 ↔ RGB TXT / TXP 변환기 (Python 소스)")
+    parser = argparse.ArgumentParser(
+        description="Convert images to RGB TXT and restore TXT/TXP files to PNG.",
+        epilog="To install on Windows, run install.cmd from Command Prompt (CMD).",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     actions = parser.add_mutually_exclusive_group()
-    actions.add_argument("--to-txt", metavar="IMAGE")
-    actions.add_argument("--to-image", metavar="TXT_OR_TXP")
-    actions.add_argument("--install", action="store_true")
-    actions.add_argument("--uninstall", action="store_true")
-    actions.add_argument("--watch", action="store_true")
-    actions.add_argument("--stop-watcher", action="store_true")
-    parser.add_argument("--no-open", action="store_true", help="변환 결과를 저장만 하고 열지 않습니다")
+    actions.add_argument("--to-txt", metavar="IMAGE", help="save an image as RGB text")
+    actions.add_argument("--to-image", metavar="TXT_OR_TXP", help="restore RGB text to PNG")
+    actions.add_argument("--install", action="store_true", help="install Explorer integration and start automatic conversion")
+    actions.add_argument("--uninstall", action="store_true", help="stop automatic conversion and remove Explorer integration")
+    actions.add_argument("--watch", action="store_true", help="run the background watcher with a tray icon")
+    actions.add_argument("--start-watcher", action="store_true", help="start the installed background watcher")
+    actions.add_argument("--stop-watcher", action="store_true", help="stop automatic conversion for this login")
+    parser.add_argument("--no-open", action="store_true", help="save the converted file without opening it")
     args = parser.parse_args(argv)
     log_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "PixelTxtConverter"
     # File-only conversions and tests do not write outside the selected output directory.
@@ -70,6 +41,7 @@ def main(argv=None):
         logging.basicConfig(level=logging.INFO, handlers=[RotatingFileHandler(log_dir / "python.log", maxBytes=1_000_000, backupCount=1, encoding="utf-8")])
     try:
         if args.to_txt or args.to_image:
+            from .core import to_image, to_text
             output = to_text(args.to_txt) if args.to_txt else to_image(args.to_image)
             if not args.no_open and os.name == "nt":
                 if args.to_txt:
@@ -78,21 +50,35 @@ def main(argv=None):
                     os.startfile(output)
             if sys.stdout:
                 print(output)
-        elif args.watch:
-            from .tray import run
-            run()
-        elif args.install or args.uninstall or args.stop_watcher:
-            from .windows import install, uninstall, stop_watcher
+        elif args.watch or args.install or args.uninstall or args.start_watcher or args.stop_watcher:
+            if os.name != "nt":
+                raise RuntimeError("Explorer integration and automatic conversion require Windows 10 or 11.")
+            from .windows import SOURCE_DIR, install, uninstall, start_watcher, stop_watcher
             if args.install:
                 install(Path(__file__).resolve().parent.parent)
+                if sys.stdout:
+                    print("Installation complete. TXP automatic conversion is running.")
+            elif args.watch:
+                from .tray import run
+                run()
+            elif args.start_watcher:
+                script = SOURCE_DIR / "main.py"
+                if not script.is_file():
+                    raise RuntimeError("Run install.cmd before starting automatic conversion.")
+                start_watcher(script)
+                if sys.stdout:
+                    print("TXP automatic conversion is running.")
             elif args.stop_watcher:
                 stop_watcher()
+                if sys.stdout:
+                    print("Automatic conversion stopped for this login.")
             else:
-                from tkinter import messagebox
-                if messagebox.askyesno("Pixel TXT Converter", "자동 변환과 파일 연결을 해제할까요? 원본 파일은 유지됩니다."):
-                    uninstall()
+                uninstall()
+                if sys.stdout:
+                    print("Automatic conversion, startup registration, and Explorer integration removed.")
+                    print("Installed source files and your images, TXT files, and TXP files were kept.")
         else:
-            _setup()
+            parser.print_help()
     except Exception as error:
         logging.exception("Pixel TXT failed")
         if args.watch:

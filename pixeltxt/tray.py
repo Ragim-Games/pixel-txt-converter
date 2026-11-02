@@ -23,8 +23,8 @@ def run():
     for y in (12, 28, 44):
         for x in (12, 28, 44):
             draw.rectangle((x, y, x + 10, y + 10), fill="white")
-    icon = pystray.Icon("PixelTxtPython", icon_image, "Pixel TXT · Python 자동 변환",
-        pystray.Menu(pystray.MenuItem("이번 로그인 동안 자동 변환 종료", lambda: icon.stop())))
+    icon = pystray.Icon("PixelTxtPython", icon_image, "Pixel TXT - Automatic conversion",
+        pystray.Menu(pystray.MenuItem("Stop automatic conversion for this login", lambda: icon.stop())))
     last_notice = 0.0
 
     def completed(source, output, error):
@@ -33,7 +33,7 @@ def run():
             LOG.warning("Conversion failed for %s: %s", source, error)
         if time.monotonic() - last_notice > 3:
             last_notice = time.monotonic()
-            icon.notify(str(error) if error else output.name, "TXP 변환 실패" if error else "TXP → PNG 완료")
+            icon.notify(str(error) if error else output.name, "TXP conversion failed" if error else "TXP to PNG complete")
 
     monitor = TxpMonitor(completed)
 
@@ -64,7 +64,7 @@ def run():
     thread = threading.Thread(target=worker, daemon=True)
     try:
         if not refresh():
-            raise RuntimeError("감지할 수 있는 로컬 드라이브가 없습니다.")
+            raise RuntimeError("No local drives are available to watch.")
         thread.start()
         icon.run(setup=setup)
     finally:

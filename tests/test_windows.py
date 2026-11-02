@@ -10,7 +10,7 @@ class WindowsTests(unittest.TestCase):
         import winreg
         from pixeltxt import windows as shell
         path = rf"Software\PixelTxtPython.Tests\{uuid.uuid4().hex}"
-        script = Path(r"C:\한글 폴더\python\main.py")
+        script = Path("C:/\u2603 folder/python/main.py")
         try:
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, path) as root:
                 shell._set(root, ".txp", {"": "Original.TxpApp"})
@@ -20,6 +20,10 @@ class WindowsTests(unittest.TestCase):
                 self.assertIn('"%1"', shell.command(script, "--to-txt"))
                 self.assertIn("main.py", shell.command(script, "--to-txt"))
                 self.assertIn("pythonw.exe", shell.command(script, "--to-txt"))
+                uninstall_command = shell.command(script, "--uninstall", False, windowless=False)
+                self.assertIn("python.exe", uninstall_command)
+                self.assertNotIn("pythonw.exe", uninstall_command)
+                self.assertNotIn('"%1"', uninstall_command)
                 missing = r"SystemFileAssociations\.webp\shell\PixelTxtConverter.ToTxt"
                 shell._delete_tree(root, missing)
                 self.assertFalse(shell.registered(root, script))
